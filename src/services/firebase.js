@@ -13,29 +13,30 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 export const db = firebase.firestore();
 
+const convertObjectDateFields = (convertObjectDate, obj) => {
+  const newData = Object.keys(obj).reduce(convertObjectDate, obj);
+  return newData;
+};
+
 export const dateConverter = {
   fromFirestore(snapshot, options) {
     const data = snapshot.data(options);
-
-    const convertObjectDates = (obj, key) => {
+    const convertObjectDate = (obj, key) => {
       if (data[key].toDate) {
         return { ...obj, [key]: data[key].toDate() };
       }
       return obj;
     };
-
-    const newData = Object.keys(data).reduce(convertObjectDates, data);
-    return newData;
+    return convertObjectDateFields(convertObjectDate, data);
   },
+
   toFirestore(data) {
-    const convertObjectDates = (obj, key) => {
+    const convertObjectDate = (obj, key) => {
       if (data[key] instanceof Date) {
         return { ...obj, [key]: firebase.firestore.Timestamp.fromDate(data[key]) };
       }
       return obj;
     };
-
-    const newData = Object.keys(data).reduce(convertObjectDates, data);
-    return newData;
+    return convertObjectDateFields(convertObjectDate, data);
   },
 };
