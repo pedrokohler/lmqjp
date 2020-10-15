@@ -1,6 +1,7 @@
 port module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
+import Browser.Navigation as Nav
 import Date exposing (Date, day, month, weekday, year)
 import DatePicker exposing (DateEvent(..), defaultSettings)
 import Html exposing (Html, button, div, h1, img, input, label, p, span, text)
@@ -8,6 +9,7 @@ import Html.Attributes exposing (checked, disabled, required, src, style, type_,
 import Html.Events exposing (onCheck, onClick, onInput)
 import Json.Encode
 import Time exposing (Month(..))
+import Url
 
 
 port saveCustomer : Json.Encode.Value -> Cmd msg
@@ -18,7 +20,7 @@ port saveCustomer : Json.Encode.Value -> Cmd msg
 
 
 type Model
-    = SuccessCustomerDetail Customer
+    = SuccessCustomerDetail Customer Nav.Key Url.Url
 
 
 type alias Customer =
@@ -52,8 +54,8 @@ settings editable =
     { defaultSettings | inputAttributes = inputAttributes }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
     let
         ( datePicker, datePickerFx ) =
             DatePicker.init
@@ -79,7 +81,9 @@ init =
     in
     ( SuccessCustomerDetail
         customer
-    , Cmd.map (ToDatePicker customer) datePickerFx
+        key
+        url
+    , Cmd.map ToDatePicker datePickerFx
     )
 
 
@@ -88,60 +92,74 @@ init =
 
 
 type Msg
-    = UpdateName Customer String
-    | UpdateMajor Customer String
-    | UpdateUniversity Customer String
-    | UpdateSchool Customer String
-    | UpdateFromEvent Customer String
-    | UpdateEventLocation Customer String
-    | UpdateBirthYear Customer String
-    | UpdateFromApp Customer Bool
-    | UpdateFromInternet Customer Bool
-    | ToggleEditable Customer
-    | SaveCustomer Customer
-    | ToDatePicker Customer DatePicker.Msg
+    = UpdateName String
+    | UpdateMajor String
+    | UpdateUniversity String
+    | UpdateSchool String
+    | UpdateFromEvent String
+    | UpdateEventLocation String
+    | UpdateBirthYear String
+    | UpdateFromApp Bool
+    | UpdateFromInternet Bool
+    | ToggleEditable
+    | SaveCustomer
+    | ToDatePicker DatePicker.Msg
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        UpdateName customer newName ->
+    case ( msg, model ) of
+        ( UpdateName newName, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | name = newName, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateMajor customer newMajor ->
+        ( UpdateMajor newMajor, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | major = newMajor, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateUniversity customer newUniversity ->
+        ( UpdateUniversity newUniversity, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | university = newUniversity, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateSchool customer newSchool ->
+        ( UpdateSchool newSchool, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | school = newSchool, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateFromEvent customer newFromEvent ->
+        ( UpdateFromEvent newFromEvent, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | fromEvent = newFromEvent, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateEventLocation customer newEventLocation ->
+        ( UpdateEventLocation newEventLocation, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer | eventLocation = newEventLocation, unedited = False }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateBirthYear customer newBirthYear ->
+        ( UpdateBirthYear newBirthYear, SuccessCustomerDetail customer key url ) ->
             let
                 intBirthYear =
                     Maybe.withDefault customer.birthYear (String.toInt newBirthYear)
@@ -152,38 +170,46 @@ update msg model =
                     , ageOnDate = calculateAgeOnDate customer.date intBirthYear
                     , unedited = False
                 }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateFromApp customer newFromApp ->
+        ( UpdateFromApp newFromApp, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer
                     | fromApp = newFromApp
                     , unedited = False
                 }
+                key
+                url
             , Cmd.none
             )
 
-        UpdateFromInternet customer newFromInternet ->
+        ( UpdateFromInternet newFromInternet, SuccessCustomerDetail customer key url ) ->
             ( SuccessCustomerDetail
                 { customer
                     | fromInternet = newFromInternet
                     , unedited = False
                 }
+                key
+                url
             , Cmd.none
             )
 
-        ToggleEditable customer ->
+        ( ToggleEditable, SuccessCustomerDetail customer key url ) ->
             let
                 newEditable =
                     not customer.editable
             in
             ( SuccessCustomerDetail
                 { customer | editable = newEditable }
+                key
+                url
             , Cmd.none
             )
 
-        SaveCustomer customer ->
+        ( SaveCustomer, SuccessCustomerDetail customer key url ) ->
             case customer.date of
                 Nothing ->
                     ( model, Cmd.none )
@@ -191,10 +217,12 @@ update msg model =
                 Just date ->
                     ( SuccessCustomerDetail
                         { customer | unedited = True }
+                        key
+                        url
                     , saveCustomer <| customerEncoder customer
                     )
 
-        ToDatePicker customer subMsg ->
+        ( ToDatePicker subMsg, SuccessCustomerDetail customer key url ) ->
             let
                 ( newDatePicker, dateEvent ) =
                     DatePicker.update (settings customer.editable) subMsg customer.datePicker
@@ -222,6 +250,21 @@ update msg model =
                     , datePickerInitialized = True
                     , unedited = justInitialized
                 }
+                key
+                url
+            , Cmd.none
+            )
+
+        ( LinkClicked urlRequest, SuccessCustomerDetail customer key _ ) ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        ( UrlChanged url, SuccessCustomerDetail customer key _ ) ->
+            ( SuccessCustomerDetail customer key url
             , Cmd.none
             )
 
@@ -272,56 +315,64 @@ customerEncoder customer =
 ---- VIEW ----
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    case model of
-        SuccessCustomerDetail customer ->
-            div []
-                [ h1 [] [ text "Customer Detail" ]
-                , customerForm customer
-                , datePickerInput customer
-                , div [] [ text <| "Age on date: " ++ String.fromInt customer.ageOnDate ]
-                , pageControl customer
+    { title = "LMQJP"
+    , body =
+        case model of
+            SuccessCustomerDetail customer key url ->
+                [ div []
+                    [ h1 [] [ text "Customer Detail" ]
+                    , customerForm customer
+                    , datePickerInput customer
+                    , div [] [ text <| "Age on date: " ++ String.fromInt customer.ageOnDate ]
+                    , pageControl customer
+                    ]
                 ]
+    }
 
 
 customerForm : Customer -> Html Msg
 customerForm customer =
+    let
+        editable =
+            customer.editable
+    in
     div []
-        [ editableField "Name" customer.name UpdateName customer
-        , editableField "Birth year" (String.fromInt customer.birthYear) UpdateBirthYear customer
-        , editableField "Major" customer.major UpdateMajor customer
-        , editableField "University" customer.university UpdateUniversity customer
-        , editableField "School" customer.school UpdateSchool customer
-        , editableField "From Event" customer.fromEvent UpdateFromEvent customer
-        , editableField "Event Location" customer.eventLocation UpdateEventLocation customer
-        , checkbox "From app" customer.fromApp UpdateFromApp customer
-        , checkbox "From internet" customer.fromInternet UpdateFromInternet customer
+        [ editableField "Name" customer.name UpdateName editable
+        , editableField "Birth year" (String.fromInt customer.birthYear) UpdateBirthYear editable
+        , editableField "Major" customer.major UpdateMajor editable
+        , editableField "University" customer.university UpdateUniversity editable
+        , editableField "School" customer.school UpdateSchool editable
+        , editableField "From Event" customer.fromEvent UpdateFromEvent editable
+        , editableField "Event Location" customer.eventLocation UpdateEventLocation editable
+        , checkbox "From app" customer.fromApp UpdateFromApp editable
+        , checkbox "From internet" customer.fromInternet UpdateFromInternet editable
         ]
 
 
-editableField : String -> String -> (Customer -> String -> Msg) -> Customer -> Html Msg
-editableField labelText field toMsg customer =
+editableField : String -> String -> (String -> Msg) -> Bool -> Html Msg
+editableField labelText field toMsg editable =
     div []
         [ label [] [ text <| labelText ++ ": " ]
         , input
-            [ disabled (not customer.editable)
+            [ disabled (not editable)
             , value field
-            , onInput <| toMsg customer
+            , onInput toMsg
             , type_ "text"
             ]
             []
         ]
 
 
-checkbox : String -> Bool -> (Customer -> Bool -> Msg) -> Customer -> Html Msg
-checkbox labelText field toMsg customer =
+checkbox : String -> Bool -> (Bool -> Msg) -> Bool -> Html Msg
+checkbox labelText field toMsg editable =
     div []
         [ label [] [ text <| labelText ++ ": " ]
         , input
-            [ disabled (not customer.editable)
+            [ disabled (not editable)
             , checked field
-            , onCheck <| toMsg customer
+            , onCheck toMsg
             , type_ "checkbox"
             ]
             []
@@ -333,7 +384,7 @@ datePickerInput customer =
     div []
         [ span [] [ text "Date" ]
         , DatePicker.view customer.date (settings customer.editable) customer.datePicker
-            |> Html.map (ToDatePicker customer)
+            |> Html.map ToDatePicker
         ]
 
 
@@ -342,10 +393,10 @@ pageControl customer =
     let
         editButtonText =
             if customer.editable then
-                "Desabilitar edição"
+                "Disable editing"
 
             else
-                "Habilitar edição"
+                "Enable editing"
 
         editButtonIcon =
             if customer.editable then
@@ -356,7 +407,7 @@ pageControl customer =
     in
     div []
         [ button
-            [ onClick <| ToggleEditable customer
+            [ onClick ToggleEditable
             ]
             [ text editButtonText
             , img
@@ -365,12 +416,21 @@ pageControl customer =
                 []
             ]
         , button
-            [ onClick <| SaveCustomer customer
+            [ onClick SaveCustomer
             , disabled customer.unedited
             ]
-            [ text "Salvar" ]
-        , button [] [ text "Voltar" ]
+            [ text "Save" ]
+        , button [] [ text "Back" ]
         ]
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
 
 
 
@@ -379,9 +439,11 @@ pageControl customer =
 
 main : Program () Model Msg
 main =
-    Browser.element
-        { view = view
-        , init = \_ -> init
+    Browser.application
+        { init = init
+        , view = view
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
