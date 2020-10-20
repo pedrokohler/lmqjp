@@ -9,11 +9,12 @@
   height: inherit;
 }
 
-body {
+body, html {
   font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   text-align: center;
   color: #293c4b;
+  box-sizing: border-box;
 }
 
 h1 {
@@ -32,140 +33,72 @@ button {
   margin-left: 1em;
 }
 
-.elm-datepicker--container {
-  position: relative;
+.backdrop {
+    position: fixed;
+    width: 200vw;
+    height: 200vh;
+    left: -50%;
+    top: -50%;
+    background-color: rgba(26, 26, 26, 0.7);
+    z-index: 1000;
 }
 
-.elm-datepicker--input:focus {
-  outline: 0;
+.message-modal {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 300px;
+    width: 70%;
+    height: 150px;
+    background-color: #FBFBD3;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 3px;
+    padding: 25px;
+    text-align: center;
+    -webkit-animation: slide-down .3s ease-out;
+    -moz-animation: slide-down .3s ease-out;
 }
 
-.elm-datepicker--picker {
-  position: absolute;
-  border: 1px solid #CCC;
-  z-index: 10;
-  background-color: white;
-  left: 40%;
-  top: 40%;
+.message-modal button {
+    width: 100px;
+    height: 35px;
+    text-transform: uppercase;
+    background-color: #FBC303;
+    font-weight: 900;
+    font-family: inherit;
+    border: none;
+    border-radius: 3px;
+    vertical-align: baseline;
+    cursor: pointer;
 }
 
-.elm-datepicker--picker-header,
-.elm-datepicker--weekdays {
-  background: #F2F2F2;
+
+.loader {
+  border: 5px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 5px solid #AAAAAA;
+  width: 30px;
+  height: 30px;
+  position: fixed;
+  z-index: 1001;
+  left: 50%;
+  top: 50%;
+  -webkit-animation: spin 1s linear infinite; /* Safari */
+  animation: spin 1s linear infinite;
 }
 
-.elm-datepicker--picker-header {
-  display: flex;
-  align-items: center;
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
 }
 
-.elm-datepicker--prev-container,
-.elm-datepicker--next-container {
-  flex: 0 1 auto;
-  cursor: pointer;
-}
-
-.elm-datepicker--month-container {
-  flex: 1 1 auto;
-  padding: 0.5em;
-  display: flex;
-  flex-direction: column;
-}
-
-.elm-datepicker--month,
-.elm-datepicker--year {
-  flex: 1 1 auto;
-  cursor: default;
-  text-align: center;
-}
-
-.elm-datepicker--year {
-  font-size: 0.6em;
-  font-weight: 700;
-}
-
-.elm-datepicker--prev,
-.elm-datepicker--next {
-  border: 6px solid transparent;
-  background-color: inherit;
-  display: block;
-  width: 0;
-  height: 0;
-  padding: 0 0.2em;
-}
-
-.elm-datepicker--prev {
-  border-right-color: #AAA;
-}
-
-.elm-datepicker--prev:hover {
-  border-right-color: #BBB;
-}
-
-.elm-datepicker--next {
-  border-left-color: #AAA;
-}
-
-.elm-datepicker--next:hover {
-  border-left-color: #BBB;
-}
-
-.elm-datepicker--table {
-  border-spacing: 0;
-  border-collapse: collapse;
-  font-size: 0.8em;
-}
-
-.elm-datepicker--table td {
-  width: 2em;
-  height: 2em;
-  text-align: center;
-}
-
-.elm-datepicker--row {
-  border-top: 1px solid #F2F2F2;
-}
-
-.elm-datepicker--dow {
-  border-bottom: 1px solid #CCC;
-  cursor: default;
-}
-
-.elm-datepicker--day {
-  cursor: pointer;
-}
-.elm-datepicker--day:hover {
-  background: #F2F2F2;
-}
-
-.elm-datepicker--disabled {
-  cursor: default;
-  color: #DDD;
-}
-.elm-datepicker--disabled:hover {
-  background: inherit;
-}
-
-.elm-datepicker--picked {
-  color: white;
-  background: darkblue;
-}
-.elm-datepicker--picked:hover {
-  background: darkblue;
-}
-
-.elm-datepicker--today {
-  font-weight: bold;
-}
-
-.elm-datepicker--other-month {
-  color: #AAA;
-}
-
-.elm-datepicker--other-month.elm-datepicker--disabled {
-  color: #EEE;
-}
-
-.elm-datepicker--other-month.elm-datepicker--picked {
-  color: white;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
