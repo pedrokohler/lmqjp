@@ -52,38 +52,56 @@ app.ports.saveCustomer.subscribe(async (customer) => {
     const sanitizedCustomer = sanitizeCustomer(body);
     const { id } = await createOrUpdateCustomer(maybeId, sanitizedCustomer);
 
-    app.ports.saveSuccess.send({
+    app.ports.saveCustomerSuccess.send({
       message: id,
     });
   } catch (e) {
-    app.ports.saveError.send({
+    app.ports.saveCustomerError.send({
       message: e.message,
     });
   }
 });
 
+const sanitizeCustomerForElmApp = (customer) => {
+  const { id } = customer;
+
+  const sanitizeCustomer = (body) => ({
+    id,
+    ...body,
+    date: body.date.toISOString(),
+  });
+
+  return sanitizeCustomer(customer.data());
+};
+
 app.ports.loadCustomer.subscribe(async (id) => {
   try {
     const customer = await db.collection("customers").withConverter(dateConverter).doc(id).get();
+
     if (customer.exists) {
-      const { id } = customer;
-
-      const sanitizeCustomer = (body) => ({
-        ...body,
-        date: body.date.toISOString(),
-      });
-
-      const sanitizedCustomer = sanitizeCustomer(customer.data());
-
-      app.ports.loadSuccess.send({
-        id,
-        ...sanitizedCustomer,
-      });
+      const sanitizedCustomer = sanitizeCustomerForElmApp(customer);
+      app.ports.loadCustomerSuccess.send(sanitizedCustomer);
     } else {
       throw new Error("Customer does not exist.");
     }
   } catch (e) {
-    app.ports.loadError.send({
+    app.ports.loadCustomerError.send({
+      message: e.message,
+    });
+  }
+});
+
+app.ports.loadCustomerList.subscribe(async () => {
+  try {
+    await db.collection("customers")
+      .withConverter(dateConverter)
+      .orderBy("date")
+      .onSnapshot((customerList) => {
+        const sanitizedCustomerList = customerList.docs.map(sanitizeCustomerForElmApp);
+        app.ports.loadCustomerListSuccess.send(sanitizedCustomerList);
+      });
+  } catch (e) {
+    app.ports.loadCustomerListError.send({
       message: e.message,
     });
   }
