@@ -10,8 +10,8 @@ const app = Elm.Main.init({
 
 const getTimezoneOffsetString = () => {
   const timezoneOffsetInMinutes = new Date().getTimezoneOffset();
+  const mathematicalSign = timezoneOffsetInMinutes > 0 ? "-" : "+";
   const timezoneOffsetInHours = String(Math.abs(timezoneOffsetInMinutes) / 60).padStart(2, "0");
-  const mathematicalSign = timezoneOffsetInHours > 0 ? "-" : "+";
   return `GMT${mathematicalSign}${timezoneOffsetInHours}:00`;
 };
 
@@ -44,12 +44,12 @@ app.ports.saveCustomer.subscribe(async (customer) => {
   try {
     const { id: maybeId, ...body } = customer;
 
-    const sanitizeCustomer = (body) => ({
+    const sanitizeCustomerFromElmApp = (body) => ({
       ...body,
       date: new Date(`${body.date} ${getTimezoneOffsetString()}`),
     });
 
-    const sanitizedCustomer = sanitizeCustomer(body);
+    const sanitizedCustomer = sanitizeCustomerFromElmApp(body);
     const { id } = await createOrUpdateCustomer(maybeId, sanitizedCustomer);
 
     app.ports.saveCustomerSuccess.send({
