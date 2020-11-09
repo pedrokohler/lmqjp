@@ -2,7 +2,7 @@ import "./main.css";
 import "./elm-date-picker.css";
 import { Elm } from "./Main.elm";
 import * as serviceWorker from "./serviceWorker";
-import { db, dateConverter } from "./services/firebase";
+import { db, dateConverter, increment } from "./services/firebase";
 
 const app = Elm.Main.init({
   node: document.getElementById("root"),
@@ -17,21 +17,55 @@ const getTimezoneOffsetString = () => {
 
 const now = () => new Date(Date.now());
 
-const updateCustomer = (id, customer) => {
-  const docRef = db.collection("customers").withConverter(dateConverter).doc(id);
+// @todo refactor
+const getNumberToIncrement = (previousVal, newVal) => {
+  if (previousVal === newVal) {
+    return 0;
+  }
 
-  return docRef.update({
-    ...customer,
-    updatedAt: now(),
-  }).then(() => docRef);
+  if (previousVal) {
+    return -1;
+  }
+
+  return 1;
 };
 
-const createCustomer = (customer) => db
-  .collection("customers").withConverter(dateConverter).add({
+// @todo refactor
+const updateCustomer = (id, customer) => {
+  const docRef = db.collection("customers").withConverter(dateConverter).doc(id);
+  const statisticsRef = db.collection("meta").doc("statistics");
+  return db.runTransaction(async (transaction) => {
+    const currentCustomer = await transaction.get(docRef);
+    const previousMadeAPurchase = currentCustomer.data().madeAPurchase;
+    const newMadeAPurchase = customer.madeAPurchase;
+    const numberToIncrement = getNumberToIncrement(previousMadeAPurchase, newMadeAPurchase);
+    await transaction.update(docRef, {
+      ...customer,
+      updatedAt: now(),
+    });
+    await transaction.update(statisticsRef, {
+      madeAPurchase: increment(numberToIncrement),
+    });
+    return docRef;
+  });
+};
+
+// @todo refactor
+const createCustomer = (customer) => {
+  const batch = db.batch();
+  const customerRef = db.collection("customers").withConverter(dateConverter).doc();
+  const statisticsRef = db.collection("meta").doc("statistics");
+  batch.set(customerRef, {
     ...customer,
     createdAt: now(),
     updatedAt: now(),
   });
+  batch.update(statisticsRef, {
+    total: increment(1),
+    madeAPurchase: customer.madeAPurchase ? increment(1) : increment(0),
+  });
+  return batch.commit().then(() => customerRef);
+};
 
 const createOrUpdateCustomer = (id, customer) => {
   if (id) {

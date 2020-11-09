@@ -11,7 +11,10 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 export const db = firebase.firestore();
+
+export const increment = (n) => firebase.firestore.FieldValue.increment(n);
 
 const convertObjectDateFields = (convertObjectDate, obj) => {
   const newData = Object.keys(obj).reduce(convertObjectDate, obj);
