@@ -13,6 +13,7 @@
     "eslint-plugin-import": "^2.22.1"
   },
   "scripts": {
+    "build": "npx elm-app build",
     "start": "npx elm-app start",
     "elm:install": "npx elm install"
   }
